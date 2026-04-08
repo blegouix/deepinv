@@ -33,6 +33,7 @@ dependencies = [
     "requests",
     "h5py",
     "natsort",
+    "astra-toolbox (>=2.4.1,<3.0.0)",
 ]
 
 [tool.setuptools]

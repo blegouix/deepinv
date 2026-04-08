@@ -23,6 +23,8 @@ from deepinv.utils import load_torch_url
 from deepinv.physics import LogPoissonNoise
 from deepinv.optim import LogPoissonLikelihood
 
+from torch.nn import functional
+
 if importlib.util.find_spec("astra") is not None:
     from deepinv.physics import TomographyWithAstra
 else:
@@ -53,7 +55,12 @@ RESULTS_DIR = BASE_DIR / "results"
 url = "https://huggingface.co/datasets/deepinv/LoDoPaB-CT_toy/resolve/main/LoDoPaB-CT_small.pt"
 dataset = load_torch_url(url)
 test_imgs = dataset["test_imgs"].to(device)
+depth = test_imgs.shape[-1]
+test_imgs = test_imgs.unsqueeze(2)
+test_imgs = test_imgs.repeat(1, 1, depth, 1, 1)
 img_size = test_imgs.shape[-1]
+pad_size = img_size // 2
+test_imgs = functional.pad(test_imgs, (pad_size, pad_size)) # WORKS IF COMMENTED
 
 # %%
 # Definition of forward operator and noise model
@@ -69,11 +76,11 @@ num_angles = 100
 noise_model = LogPoissonNoise(mu=mu, N0=N0)
 data_fidelity = LogPoissonLikelihood(mu=mu, N0=N0)
 physics = TomographyWithAstra(
-    img_size=(img_size, img_size),
+    img_size=(test_imgs.shape[-3], test_imgs.shape[-2], test_imgs.shape[-1]),
     angles=num_angles,
     device=device,
     noise_model=noise_model,
-    geometry_type="fanbeam",
+    geometry_type="conebeam",
     n_detector_pixels=2 * img_size,
     geometry_parameters={"source_radius": 800.0, "detector_radius": 200.0},
     normalize=False,
